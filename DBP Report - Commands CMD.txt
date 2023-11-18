@@ -1,0 +1,1332 @@
+﻿bash-4.4$ /usr/pgsql-14/bin/pg_ctl start
+pg_ctl: another server might be running; trying to start server anyway
+waiting for server to start....2023-05-27 13:06:18.850 CEST [3456] LOG:  redirecting log output to logging collector process
+2023-05-27 13:06:18.850 CEST [3456] HINT:  Future log output will appear in directory "log".
+... done
+server started
+bash-4.4$ psql
+psql (14.1)
+Type "help" for help.
+
+postgres=# EXPLAIN ANALYZE SELECT * FROM example_table WHERE short_text = 'Record_1';
+ERROR:  column "short_text" does not exist
+LINE 1: EXPLAIN ANALYZE SELECT * FROM example_table WHERE short_text...
+                                                          ^
+postgres=# EXPLAIN ANALYZE SELECT * FROM exampl_table WHERE short_text = 'Record_1';
+                                                                 QUERY PLAN     
+                                                            
+--------------------------------------------------------------------------------
+------------------------------------------------------------
+ Index Scan using idx_example_table_short_text on exampl_table  (cost=0.42..8.44
+ rows=1 width=76) (actual time=4.977..4.983 rows=1 loops=1)
+   Index Cond: ((short_text)::text = 'Record_1'::text)
+ Planning Time: 62.404 ms
+ Execution Time: 5.238 ms
+(4 rows)
+
+postgres=# EXPLAIN ANALYZE SELECT * FROM example_table WHERE number > 500000;
+ERROR:  column "number" does not exist
+LINE 1: EXPLAIN ANALYZE SELECT * FROM example_table WHERE number > 5...
+                                                          ^
+postgres=# EXPLAIN ANALYZE SELECT * FROM exampl_table WHERE number > 500000;
+                                                       QUERY PLAN               
+                                        
+--------------------------------------------------------------------------------
+----------------------------------------
+ Seq Scan on exampl_table  (cost=0.00..23863.00 rows=497540 width=76) (actual ti
+me=5.168..1129.015 rows=499955 loops=1)
+   Filter: (number > 500000)
+   Rows Removed by Filter: 500048
+ Planning Time: 1.132 ms
+ Execution Time: 1192.465 ms
+(5 rows)
+
+postgres=# EXPLAIN ANALYZE INSERT INTO exampl_table (short_text, long_text, number, date_column) VALUES ('New Record', 'This is a new record', 123456, '2022-01-01');
+                                              QUERY PLAN                        
+                      
+--------------------------------------------------------------------------------
+----------------------
+ Insert on exampl_table  (cost=0.00..0.01 rows=0 width=0) (actual time=43.293..4
+3.294 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=194) (actual time=24.224..24.225 ro
+ws=1 loops=1)
+ Planning Time: 5.873 ms
+ Execution Time: 43.428 ms
+(4 rows)
+
+postgres=# EXPLAIN ANALYZE UPDATE example_table SET long_text = 'Updated text'WHERE id = 1;
+ERROR:  column "long_text" of relation "example_table" does not exist
+LINE 1: EXPLAIN ANALYZE UPDATE example_table SET long_text = 'Update...
+                                                 ^
+postgres=# EXPLAIN ANALYZE UPDATE exampl_table SET long_text = 'Updated text'WHERE id = 1;
+                                                              QUERY PLAN        
+                                                       
+--------------------------------------------------------------------------------
+-------------------------------------------------------
+ Update on exampl_table  (cost=0.42..8.44 rows=0 width=0) (actual time=0.963..0.
+964 rows=0 loops=1)
+   ->  Index Scan using exampl_table_pkey on exampl_table  (cost=0.42..8.44 rows
+=1 width=38) (actual time=0.807..0.811 rows=1 loops=1)
+         Index Cond: (id = 1)
+ Planning Time: 0.154 ms
+ Execution Time: 1.063 ms
+(5 rows)
+
+postgres=# EXPLAIN ANALYZE DELETE FROM exampl_table WHERE number = 12345;
+                                                                  QUERY PLAN    
+                                                              
+--------------------------------------------------------------------------------
+--------------------------------------------------------------
+ Delete on exampl_table  (cost=0.42..12.46 rows=0 width=0) (actual time=6.221..6
+.222 rows=0 loops=1)
+   ->  Index Scan using idx_example_table_number on exampl_table  (cost=0.42..12
+.46 rows=2 width=6) (actual time=6.219..6.219 rows=0 loops=1)
+         Index Cond: (number = 12345)
+ Planning Time: 0.086 ms
+ Execution Time: 6.253 ms
+(5 rows)
+
+postgres=# CREATE TABLE e_table (id SERIAL PRIMARY KEY, short_text VARCHAR(50), long_text TEXT, number INT,date_column DATE)
+postgres-# alter role postgres password 'postgres';^C
+postgres=# date_column DATE
+postgres-# \q
+bash-4.4$ /usr/pgsql-14/bin/pg_ctl stop
+waiting for server to shut down.... done
+server stopped
+bash-4.4$ /usr/pgsql-14/bin/pg_ctl stop
+pg_ctl: PID file "/var/lib/pgsql/14/data/postmaster.pid" does not exist
+Is server running?
+bash-4.4$ /usr/pgsql-14/bin/pg_ctl start
+waiting for server to start....2023-05-27 18:31:42.463 CEST [11828] LOG:  redirecting log output to logging collector process
+2023-05-27 18:31:42.463 CEST [11828] HINT:  Future log output will appear in directory "log".
+ done
+server started
+bash-4.4$ psql
+psql (14.1)
+Type "help" for help.
+
+postgres=# CREATE TABLE ex_table (id SERIAL PRIMARY KEY, short_text VARCHAR(50), long_text TEXT, number INT, date_column DATE);
+CREATE TABLE
+postgres=# CREATE TABLE exa_table (id SERIAL PRIMARY KEY, short_text VARCHAR(50), long_text TEXT, number INT, date_column DATE);
+CREATE TABLE
+postgres=# INSERT INTO ex_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 100) AS id;
+INSERT 0 100
+postgres=# INSERT INTO exa_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 10000) AS id;
+INSERT 0 10000
+postgres=# CREATE INDEX idx_short_text ON ex_table (short_text);
+CREATE INDEX
+postgres=# CREATE INDEX idx_short_text ON exa_table (short_text);
+ERROR:  relation "idx_short_text" already exists
+postgres=# CREATE INDEX idx_short_text ON ex_table (short_text);
+ERROR:  relation "idx_short_text" already exists
+postgres=# CREATE INDEX idx_short_text_a ON exa_table (short_text);
+CREATE INDEX
+postgres=# CREATE INDEX idx_upper_short_text ON ex_table (upper(short_text));
+CREATE INDEX
+postgres=# CREATE INDEX idx_upper_short_text_a ON exa_table (upper(short_text));
+CREATE INDEX
+postgres=# EXPLAIN ANALYZE INSERT INTO ex_table (short_text, long_text, number, date_column) VALUES ('New Record', 'This is a new record', 123456, '2022-01-01');
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Insert on ex_table  (cost=0.00..0.01 rows=0 width=0) (actual time=0.369..0.520 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=162) (actual time=0.034..0.035 rows=1 loops=1)
+ Planning Time: 0.608 ms
+ Execution Time: 0.735 ms
+(4 rows)
+
+postgres=# EXPLAIN ANALYZE INSERT INTO exa_table (short_text, long_text, number, date_column) VALUES ('New Record', 'This is a new record', 123456, '2022-01-01');
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Insert on exa_table  (cost=0.00..0.01 rows=0 width=0) (actual time=0.253..0.254 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=162) (actual time=0.009..0.010 rows=1 loops=1)
+ Planning Time: 0.024 ms
+ Execution Time: 0.595 ms
+(4 rows)
+
+postgres=# EXPLAIN ANALYZE UPDATE ex_table SET long_text = 'Updated text'WHERE id = 1;
+                                               QUERY PLAN                                        
+        
+-------------------------------------------------------------------------------------------------
+--------
+ Update on ex_table  (cost=0.00..3.25 rows=0 width=0) (actual time=0.320..0.321 rows=0 loops=1)
+   ->  Seq Scan on ex_table  (cost=0.00..3.25 rows=1 width=38) (actual time=0.008..0.014 rows=1 l
+oops=1)
+         Filter: (id = 1)
+         Rows Removed by Filter: 100
+ Planning Time: 1.978 ms
+ Execution Time: 0.358 ms
+(6 rows)
+
+postgres=# EXPLAIN ANALYZE UPDATE exa_table SET long_text = 'Updated text'WHERE id = 1;
+                                                           QUERY PLAN                            
+                                
+-------------------------------------------------------------------------------------------------
+--------------------------------
+ Update on exa_table  (cost=0.29..8.30 rows=0 width=0) (actual time=0.083..0.083 rows=0 loops=1)
+   ->  Index Scan using exa_table_pkey on exa_table  (cost=0.29..8.30 rows=1 width=38) (actual ti
+me=0.029..0.030 rows=1 loops=1)
+         Index Cond: (id = 1)
+ Planning Time: 0.139 ms
+ Execution Time: 0.193 ms
+(5 rows)
+
+postgres=# EXPLAIN ANALYZE DELETE FROM ex_table WHERE number = 12345;
+                                               QUERY PLAN                                        
+       
+-------------------------------------------------------------------------------------------------
+-------
+ Delete on ex_table  (cost=0.00..3.25 rows=0 width=0) (actual time=0.021..0.022 rows=0 loops=1)
+   ->  Seq Scan on ex_table  (cost=0.00..3.25 rows=1 width=6) (actual time=0.021..0.021 rows=0 lo
+ops=1)
+         Filter: (number = 12345)
+         Rows Removed by Filter: 101
+ Planning Time: 0.147 ms
+ Execution Time: 0.035 ms
+(6 rows)
+
+postgres=# EXPLAIN ANALYZE DELETE FROM exa_table WHERE number = 12345;
+                                                QUERY PLAN                                       
+          
+-------------------------------------------------------------------------------------------------
+----------
+ Delete on exa_table  (cost=0.00..238.00 rows=0 width=0) (actual time=0.704..0.705 rows=0 loops=1
+)
+   ->  Seq Scan on exa_table  (cost=0.00..238.00 rows=1 width=6) (actual time=0.704..0.704 rows=0
+ loops=1)
+         Filter: (number = 12345)
+         Rows Removed by Filter: 10001
+ Planning Time: 0.310 ms
+ Execution Time: 0.722 ms
+(6 rows)
+
+postgres=# EXPLAIN ANALYZE UPDATE exampl_table SET long_text = 'Updated text'WHERE id = 1;
+                                                              QUERY PLAN                         
+                                      
+-------------------------------------------------------------------------------------------------
+--------------------------------------
+ Update on exampl_table  (cost=0.42..8.44 rows=0 width=0) (actual time=6.452..6.469 rows=0 loops=
+1)
+   ->  Index Scan using exampl_table_pkey on exampl_table  (cost=0.42..8.44 rows=1 width=38) (act
+ual time=6.129..6.148 rows=1 loops=1)
+         Index Cond: (id = 1)
+ Planning Time: 6.866 ms
+ Execution Time: 6.649 ms
+(5 rows)
+
+postgres=# EXPLAIN ANALYZE INSERT INTO exampl_table (short_text, long_text, number, date_column) VALUES ('New Record', 'This is a new record', 123456, '2022-01-01');
+                                             QUERY PLAN                                          
+   
+-------------------------------------------------------------------------------------------------
+---
+ Insert on exampl_table  (cost=0.00..0.01 rows=0 width=0) (actual time=5.473..5.474 rows=0 loops=
+1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=194) (actual time=2.660..2.661 rows=1 loops=1)
+ Planning Time: 0.061 ms
+ Execution Time: 5.489 ms
+(4 rows)
+
+postgres=# EXPLAIN ANALYZE DELETE FROM exampl_table WHERE number = 12345;
+                                                                  QUERY PLAN                     
+                                             
+-------------------------------------------------------------------------------------------------
+---------------------------------------------
+ Delete on exampl_table  (cost=0.42..12.46 rows=0 width=0) (actual time=2.336..2.336 rows=0 loops
+=1)
+   ->  Index Scan using idx_example_table_number on exampl_table  (cost=0.42..12.46 rows=2 width=
+6) (actual time=2.335..2.335 rows=0 loops=1)
+         Index Cond: (number = 12345)
+ Planning Time: 0.171 ms
+ Execution Time: 2.357 ms
+(5 rows)
+
+postgres=# CREATE TABLE exam_table (id SERIAL PRIMARY KEY, short_text VARCHAR(50), long_text TEXT, number INT, date_column DATE);
+CREATE TABLE
+postgres=# INSERT INTO exam_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 1000000) AS id;
+INSERT 0 1000000
+postgres=# CREATE INDEX idx_short_text_ab ON exam_table (short_text);
+CREATE INDEX
+postgres=# CREATE INDEX idx_upper_short_text_ab ON exam_table (upper(short_text));
+
+
+
+
+
+CREATE INDEX
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# EXPLAIN ANALYZE INSERT INTO exam_table (short_text, long_text, number, date_column) VALUES ('New Record', 'This is a new record', 123456, '2022-01-01');
+                                            QUERY PLAN                                           
+ 
+-------------------------------------------------------------------------------------------------
+-
+ Insert on exam_table  (cost=0.00..0.01 rows=0 width=0) (actual time=0.888..0.888 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=162) (actual time=0.007..0.008 rows=1 loops=1)
+ Planning Time: 0.564 ms
+ Execution Time: 1.014 ms
+(4 rows)
+
+postgres=# EXPLAIN ANALYZE UPDATE exam_table SET long_text = 'Updated text'WHERE id = 1;
+                                                            QUERY PLAN                           
+                                  
+-------------------------------------------------------------------------------------------------
+----------------------------------
+ Update on exam_table  (cost=0.42..8.44 rows=0 width=0) (actual time=0.219..0.219 rows=0 loops=1)
+   ->  Index Scan using exam_table_pkey on exam_table  (cost=0.42..8.44 rows=1 width=38) (actual 
+time=0.080..0.081 rows=1 loops=1)
+         Index Cond: (id = 1)
+ Planning Time: 1.027 ms
+ Execution Time: 0.273 ms
+(5 rows)
+
+postgres=# EXPLAIN ANALYZE DELETE FROM exam_table WHERE number = 12345;
+                                                   QUERY PLAN                                    
+               
+-------------------------------------------------------------------------------------------------
+---------------
+ Delete on exam_table  (cost=0.00..23863.00 rows=0 width=0) (actual time=95.164..95.164 rows=0 lo
+ops=1)
+   ->  Seq Scan on exam_table  (cost=0.00..23863.00 rows=2 width=6) (actual time=78.898..95.145 r
+ows=1 loops=1)
+         Filter: (number = 12345)
+         Rows Removed by Filter: 1000000
+ Planning Time: 0.107 ms
+ Execution Time: 95.202 ms
+(6 rows)
+
+postgres=# EXPLAIN ANALYZE DELETE FROM exam_table WHERE number = 12345;
+                                                    QUERY PLAN                                   
+                 
+-------------------------------------------------------------------------------------------------
+-----------------
+ Delete on exam_table  (cost=0.00..23863.00 rows=0 width=0) (actual time=100.680..100.680 rows=0 
+loops=1)
+   ->  Seq Scan on exam_table  (cost=0.00..23863.00 rows=2 width=6) (actual time=100.678..100.678
+ rows=0 loops=1)
+         Filter: (number = 12345)
+         Rows Removed by Filter: 1000000
+ Planning Time: 0.051 ms
+ Execution Time: 100.699 ms
+(6 rows)
+
+postgres=# INSERT INTO exam_table (short_text, long_text, number, date_column) VALUES ('New Record 1', 'This is a new record', 123456, '2022-01-01');
+INSERT 0 1
+postgres=# EXPLAIN ANALYZE INSERT INTO exam_table (short_text, long_text, number, date_column) VALUES ('New Record 1', 'This is a new record', 123456, '2022-01-01');
+                                            QUERY PLAN                                           
+ 
+-------------------------------------------------------------------------------------------------
+-
+ Insert on exam_table  (cost=0.00..0.01 rows=0 width=0) (actual time=0.114..0.114 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=162) (actual time=0.008..0.008 rows=1 loops=1)
+ Planning Time: 0.033 ms
+ Execution Time: 0.354 ms
+(4 rows)
+
+postgres=# EXPLAIN ANALYZE INSERT INTO example_table (short_text, long_text, number, date_column) VALUES ('Another Record', 'This is another record', 987654, '2022-04-01');
+ERROR:  column "short_text" of relation "example_table" does not exist
+LINE 1: EXPLAIN ANALYZE INSERT INTO example_table (short_text, long_...
+                                                   ^
+postgres=# EXPLAIN ANALYZE INSERT INTO exam_table (short_text, long_text, number, date_column) VALUES ('Another Record', 'This is another record', 987654, '2022-04-01');
+                                            QUERY PLAN                                           
+ 
+-------------------------------------------------------------------------------------------------
+-
+ Insert on exam_table  (cost=0.00..0.01 rows=0 width=0) (actual time=0.053..0.053 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=162) (actual time=0.007..0.008 rows=1 loops=1)
+ Planning Time: 0.026 ms
+ Execution Time: 0.065 ms
+(4 rows)
+
+postgres=# SELECT * FROM exam_table WHERE short_text = 'Record_12345';
+  id   |  short_text  |             long_text              | number | date_column 
+-------+--------------+------------------------------------+--------+-------------
+ 12345 | Record_12345 | This is long text for record 12345 | 185874 | 2023-07-19
+(1 row)
+
+postgres=# \timing
+Timing is on.
+postgres=# SELECT * FROM exam_table WHERE short_text = 'Record_12345';
+  id   |  short_text  |             long_text              | number | date_column 
+-------+--------------+------------------------------------+--------+-------------
+ 12345 | Record_12345 | This is long text for record 12345 | 185874 | 2023-07-19
+(1 row)
+
+Time: 2.105 ms
+postgres=# SELECT * FROM exam_table WHERE indexed_column = 'Value_56789';
+ERROR:  column "indexed_column" does not exist
+LINE 1: SELECT * FROM exam_table WHERE indexed_column = 'Value_56789...
+                                       ^
+Time: 4.209 ms
+postgres=# SELECT * FROM exam_table WHERE short_text = 'Record_1';
+ id | short_text |  long_text   | number | date_column 
+----+------------+--------------+--------+-------------
+  1 | Record_1   | Updated text | 777879 | 2023-05-03
+(1 row)
+
+Time: 5.223 ms
+postgres=# SELECT * FROM exam_table WHERE long_text = 'Updated text';
+ id | short_text |  long_text   | number | date_column 
+----+------------+--------------+--------+-------------
+  1 | Record_1   | Updated text | 777879 | 2023-05-03
+(1 row)
+
+Time: 853.552 ms
+postgres=# SELECT * FROM exam_table WHERE short_text = 'Record_1';
+ id | short_text |  long_text   | number | date_column 
+----+------------+--------------+--------+-------------
+  1 | Record_1   | Updated text | 777879 | 2023-05-03
+(1 row)
+
+Time: 0.971 ms
+postgres=# UPDATE exam_table SET long_text = 'Updated text' WHERE number = 98765;
+UPDATE 2
+Time: 118.825 ms
+postgres=# UPDATE exam_table SET long_text = 'Updated text' WHERE short_text = 'Record_12345';
+UPDATE 1
+Time: 4.591 ms
+postgres=# INSERT INTO exam_table (long_text) VALUES ('Some Text'); 
+INSERT 0 1
+Time: 10.031 ms
+postgres=# INSERT INTO exam_table (short_text, long_text) VALUES ('New Record', 'Some Text'); 
+INSERT 0 1
+Time: 3.842 ms
+postgres=# INSERT INTO exam_table (short_text) VALUES ('New Record'); 
+INSERT 0 1
+Time: 3.421 ms
+postgres=# DELETE FROM exam_table WHERE date_column < '2023-03-01';
+DELETE 161400
+Time: 771.683 ms
+postgres=# DELETE FROM exam_table WHERE short_text = 'Record_3';
+DELETE 1
+Time: 23.080 ms
+postgres=# DELETE FROM exam_table WHERE date_column = '2023-03-01';
+DELETE 2739
+Time: 102.676 ms
+postgres=# q
+postgres-# \q
+bash-4.4$ /usr/pgsql-14/bin/pg_ctl stop
+waiting for server to shut down.... done
+server stopped
+bash-4.4$ /usr/pgsql-14/bin/pg_ctl start
+waiting for server to start.....2023-05-29 00:22:12.678 CEST [36704] LOG:  redirecting log output to logging collector process
+2023-05-29 00:22:12.678 CEST [36704] HINT:  Future log output will appear in directory "log".
+ done
+server started
+bash-4.4$ psql
+psql (14.1)
+Type "help" for help.
+
+postgres=# CREATE TABLE a_table (id SERIAL PRIMARY KEY, short_text VARCHAR(50), long_text TEXT, number INT, date_column DATE);
+CREATE TABLE
+postgres=# CREATE TABLE b_table (id SERIAL PRIMARY KEY, short_text VARCHAR(50), long_text TEXT, number INT, date_column DATE);
+CREATE TABLE
+postgres=# CREATE TABLE c_table (id SERIAL PRIMARY KEY, short_text VARCHAR(50), long_text TEXT, number INT, date_column DATE);
+CREATE TABLE
+postgres=# INSERT INTO a_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 100) AS id;
+INSERT 0 100
+postgres=# INSERT INTO b_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 10000) AS id;
+INSERT 0 10000
+postgres=# INSERT INTO c_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 10000) AS id;
+INSERT 0 10000
+postgres=# INSERT INTO c_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 1000000) AS id;
+INSERT 0 1000000
+postgres=# INSERT INTO a_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 100) AS id;
+INSERT 0 100
+postgres=# INSERT INTO b_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 10000) AS id;
+INSERT 0 10000
+postgres=# INSERT INTO c_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 1000000) AS id;
+INSERT 0 1000000
+postgres=# CREATE INDEX idx_short_text ON a_table (short_text);
+ERROR:  relation "idx_short_text" already exists
+postgres=# CREATE INDEX idx_short_text_a ON a_table (short_text);
+ERROR:  relation "idx_short_text_a" already exists
+postgres=# CREATE INDEX idx_short_text_ab ON a_table (short_text);
+ERROR:  relation "idx_short_text_ab" already exists
+postgres=# CREATE INDEX idx_short_text_txt ON a_table (short_text);
+CREATE INDEX
+postgres=# CREATE INDEX idx_upper_short_text_txt ON a_table (upper(short_text));
+CREATE INDEX
+postgres=# SELECT * FROM a_table WHERE short_text = 'Record_1';
+ id  | short_text |           long_text            | number | date_column 
+-----+------------+--------------------------------+--------+-------------
+   1 | Record_1   | This is long text for record 1 | 781673 | 2023-12-21
+ 101 | Record_1   | This is long text for record 1 | 157681 | 2023-12-01
+(2 rows)
+
+postgres=# CREATE TABLE aa_table (id SERIAL PRIMARY KEY, short_text VARCHAR(50), long_text TEXT, number INT, date_column DATE);
+CREATE TABLE
+postgres=# CREATE TABLE bb_table (id SERIAL PRIMARY KEY, short_text VARCHAR(50), long_text TEXT, number INT, date_column DATE);
+CREATE TABLE
+postgres=# CREATE TABLE cc_table (id SERIAL PRIMARY KEY, short_text VARCHAR(50), long_text TEXT, number INT, date_column DATE);
+CREATE TABLE
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# INSERT INTO aa_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 100) AS id;
+INSERT 0 100
+postgres=# INSERT INTO bb_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 10000) AS id;
+INSERT 0 10000
+postgres=# INSERT INTO cc_table (short_text, long_text, number, date_column) SELECT CONCAT('Record_', id), CONCAT('This is long text for record ', id), FLOOR(RANDOM() * 1000000)::INT, DATE '2023-01-01' + (FLOOR(RANDOM() * 365))::INT FROM generate_series(1, 1000000) AS id;
+INSERT 0 1000000
+postgres=# CREATE INDEX id_short_text ON aa_table (short_text);
+CREATE INDEX
+postgres=# CREATE INDEX id_upper_short_text ON aa_table (upper(short_text));
+CREATE INDEX
+postgres=# SELECT * FROM aa_table WHERE short_text = 'Record_1';
+ id | short_text |           long_text            | number | date_column 
+----+------------+--------------------------------+--------+-------------
+  1 | Record_1   | This is long text for record 1 |  60483 | 2023-07-26
+(1 row)
+
+postgres=# SELECT * FROM a_table WHERE upper(short_text) = 'RECORD_1';
+ id  | short_text |           long_text            | number | date_column 
+-----+------------+--------------------------------+--------+-------------
+   1 | Record_1   | This is long text for record 1 | 781673 | 2023-12-21
+ 101 | Record_1   | This is long text for record 1 | 157681 | 2023-12-01
+(2 rows)
+
+postgres=# SELECT * FROM aa_table WHERE short_text = 'Record_1';
+ id | short_text |           long_text            | number | date_column 
+----+------------+--------------------------------+--------+-------------
+  1 | Record_1   | This is long text for record 1 |  60483 | 2023-07-26
+(1 row)
+
+postgres=# SELECT * FROM aa_table WHERE upper(short_text) = 'RECORD_1';
+ id | short_text |           long_text            | number | date_column 
+----+------------+--------------------------------+--------+-------------
+  1 | Record_1   | This is long text for record 1 |  60483 | 2023-07-26
+(1 row)
+
+postgres=# SELECT * FROM aa_table WHERE number > 500000;
+ id  | short_text |            long_text             | number | date_column 
+-----+------------+----------------------------------+--------+-------------
+   4 | Record_4   | This is long text for record 4   | 746403 | 2023-04-12
+   6 | Record_6   | This is long text for record 6   | 777943 | 2023-10-23
+   7 | Record_7   | This is long text for record 7   | 520252 | 2023-01-27
+   8 | Record_8   | This is long text for record 8   | 931615 | 2023-01-04
+  11 | Record_11  | This is long text for record 11  | 883684 | 2023-03-03
+  14 | Record_14  | This is long text for record 14  | 528763 | 2023-09-09
+  18 | Record_18  | This is long text for record 18  | 556603 | 2023-12-01
+  19 | Record_19  | This is long text for record 19  | 934144 | 2023-02-07
+  22 | Record_22  | This is long text for record 22  | 733793 | 2023-09-05
+  23 | Record_23  | This is long text for record 23  | 828216 | 2023-04-17
+  28 | Record_28  | This is long text for record 28  | 959943 | 2023-08-10
+  29 | Record_29  | This is long text for record 29  | 687813 | 2023-12-16
+  30 | Record_30  | This is long text for record 30  | 556913 | 2023-11-24
+  35 | Record_35  | This is long text for record 35  | 743347 | 2023-08-24
+  38 | Record_38  | This is long text for record 38  | 957263 | 2023-03-28
+  41 | Record_41  | This is long text for record 41  | 804548 | 2023-12-07
+  42 | Record_42  | This is long text for record 42  | 945430 | 2023-06-14
+  43 | Record_43  | This is long text for record 43  | 912971 | 2023-04-26
+  46 | Record_46  | This is long text for record 46  | 842600 | 2023-03-02
+  48 | Record_48  | This is long text for record 48  | 918592 | 2023-07-23
+  51 | Record_51  | This is long text for record 51  | 791546 | 2023-12-14
+  52 | Record_52  | This is long text for record 52  | 796742 | 2023-01-01
+  53 | Record_53  | This is long text for record 53  | 807850 | 2023-10-15
+  54 | Record_54  | This is long text for record 54  | 803273 | 2023-03-10
+  56 | Record_56  | This is long text for record 56  | 683535 | 2023-10-30
+  57 | Record_57  | This is long text for record 57  | 974823 | 2023-04-04
+  58 | Record_58  | This is long text for record 58  | 805042 | 2023-03-02
+postgres=# EXPLAIN ANALYZE INSERT INTO example_table (short_text, long_text, number, date_column) VALUES ('New Record', 'This is a new record', 123456, '2022-01-01');
+ERROR:  column "short_text" of relation "example_table" does not exist
+LINE 1: EXPLAIN ANALYZE INSERT INTO example_table (short_text, long_...
+                                                   ^
+postgres=# EXPLAIN ANALYZE INSERT INTO aa_table (short_text, long_text, number, date_column) VALUES ('New Record', 'This is a new record', 123456, '2022-01-01');
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Insert on aa_table  (cost=0.00..0.01 rows=0 width=0) (actual time=0.817..0.818 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=162) (actual time=0.110..0.110 rows=1 loops=1)
+ Planning Time: 0.091 ms
+ Execution Time: 1.084 ms
+(4 rows)
+
+postgres=# EXPLAIN ANALYZE UPDATE aa_table SET ^Z 'Updated text'WHERE id = 1;
+[1]+  Stopped                 psql
+bash-4.4$ /usr/pgsql-14/bin/pg_ctl start
+pg_ctl: another server might be running; trying to start server anyway
+waiting for server to start....2023-05-29 00:48:21.838 CEST [37594] FATAL:  lock file "postmaster.pid" already exists
+2023-05-29 00:48:21.838 CEST [37594] HINT:  Is another postmaster (PID 36704) running in data directory "/var/lib/pgsql/14/data"?
+ stopped waiting
+pg_ctl: could not start server
+Examine the log output.
+bash-4.4$ psql
+psql (14.1)
+Type "help" for help.
+
+postgres=# EXPLAIN ANALYZE UPDATE aa_table SET long_text = 'Updated text'WHERE short_text = 'Record_1';
+                                               QUERY PLAN                                         
+       
+--------------------------------------------------------------------------------------------------
+-------
+ Update on aa_table  (cost=0.00..3.25 rows=0 width=0) (actual time=0.429..0.429 rows=0 loops=1)
+   ->  Seq Scan on aa_table  (cost=0.00..3.25 rows=1 width=38) (actual time=0.023..0.043 rows=1 lo
+ops=1)
+         Filter: ((short_text)::text = 'Record_1'::text)
+         Rows Removed by Filter: 100
+ Planning Time: 1.086 ms
+ Execution Time: 0.590 ms
+(6 rows)
+
+postgres=# EXPLAIN ANALYZE DELETE FROM aa_table WHERE short_text = 'Record_4';
+                                               QUERY PLAN                                         
+      
+--------------------------------------------------------------------------------------------------
+------
+ Delete on aa_table  (cost=0.00..3.25 rows=0 width=0) (actual time=0.531..0.532 rows=0 loops=1)
+   ->  Seq Scan on aa_table  (cost=0.00..3.25 rows=1 width=6) (actual time=0.104..0.123 rows=1 loo
+ps=1)
+         Filter: ((short_text)::text = 'Record_4'::text)
+         Rows Removed by Filter: 100
+ Planning Time: 0.112 ms
+ Execution Time: 0.560 ms
+(6 rows)
+
+postgres=# SELECT * FROM exam_table WHERE long_text = 'Updated text';^C
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# EXPLAIN ANALYZE SELECT * FROM aa_table WHERE number > 500000;
+                                             QUERY PLAN                                           
+   
+--------------------------------------------------------------------------------------------------
+---
+ Seq Scan on aa_table  (cost=0.00..3.25 rows=53 width=52) (actual time=0.042..0.052 rows=52 loops=
+1)
+   Filter: (number > 500000)
+   Rows Removed by Filter: 48
+ Planning Time: 0.224 ms
+ Execution Time: 0.104 ms
+(5 rows)
+
+postgres=# CREATE INDEX idx_a_number ON aa_table (number);
+CREATE INDEX
+postgres=# EXPLAIN ANALYZE SELECT * FROM aa_table WHERE number > 500000;
+                                             QUERY PLAN                                           
+   
+--------------------------------------------------------------------------------------------------
+---
+ Seq Scan on aa_table  (cost=0.00..3.25 rows=53 width=52) (actual time=0.007..0.014 rows=52 loops=
+1)
+   Filter: (number > 500000)
+   Rows Removed by Filter: 48
+ Planning Time: 0.504 ms
+ Execution Time: 0.025 ms
+(5 rows)
+
+postgres=# EXPLAIN ANALYZE SELECT * FROM bb_table WHERE number > 500000;
+                                                QUERY PLAN                                        
+         
+--------------------------------------------------------------------------------------------------
+---------
+ Seq Scan on bb_table  (cost=0.00..238.00 rows=4981 width=56) (actual time=0.009..2.099 rows=4975 
+loops=1)
+   Filter: (number > 500000)
+   Rows Removed by Filter: 5025
+ Planning Time: 0.420 ms
+ Execution Time: 2.247 ms
+(5 rows)
+
+postgres=# CREATE INDEX idx_b_number ON bb_table (number);
+CREATE INDEX
+postgres=# EXPLAIN ANALYZE SELECT * FROM bb_table WHERE number > 500000;
+                                                QUERY PLAN                                        
+         
+--------------------------------------------------------------------------------------------------
+---------
+ Seq Scan on bb_table  (cost=0.00..238.00 rows=4981 width=56) (actual time=0.006..0.794 rows=4975 
+loops=1)
+   Filter: (number > 500000)
+   Rows Removed by Filter: 5025
+ Planning Time: 0.140 ms
+ Execution Time: 0.933 ms
+(5 rows)
+
+postgres=# EXPLAIN ANALYZE SELECT * FROM cc_table WHERE number > 500000;
+                                                    QUERY PLAN                                    
+                 
+--------------------------------------------------------------------------------------------------
+-----------------
+ Seq Scan on cc_table  (cost=0.00..23863.00 rows=501106 width=60) (actual time=1.778..140.446 rows
+=500008 loops=1)
+   Filter: (number > 500000)
+   Rows Removed by Filter: 499992
+ Planning Time: 0.181 ms
+ Execution Time: 154.214 ms
+(5 rows)
+
+postgres=# CREATE INDEX idx_c_number ON cc_table (number);
+
+CREATE INDEX
+postgres=# 
+postgres=# EXPLAIN ANALYZE SELECT * FROM cc_table WHERE number > 500000;
+                                                    QUERY PLAN                                    
+                 
+--------------------------------------------------------------------------------------------------
+-----------------
+ Seq Scan on cc_table  (cost=0.00..23863.00 rows=501106 width=60) (actual time=0.006..106.748 rows
+=500008 loops=1)
+   Filter: (number > 500000)
+   Rows Removed by Filter: 499992
+ Planning Time: 0.185 ms
+ Execution Time: 124.692 ms
+(5 rows)
+
+postgres=# CREATE INDEX idx_a_id ON aa_table (id);
+CREATE INDEX
+postgres=# CREATE INDEX idx_b_id ON bb_table (id);
+CREATE INDEX
+postgres=# CREATE INDEX idx_c_id ON cc_table (id);
+CREATE INDEX
+postgres=# EXPLAIN ANALYZE SELECT * FROM aa_table WHERE id <= 1;
+                                            QUERY PLAN                                            
+ 
+--------------------------------------------------------------------------------------------------
+-
+ Seq Scan on aa_table  (cost=0.00..3.25 rows=1 width=52) (actual time=0.013..0.031 rows=1 loops=1)
+   Filter: (id <= 1)
+   Rows Removed by Filter: 99
+ Planning Time: 0.737 ms
+ Execution Time: 0.063 ms
+(5 rows)
+
+postgres=# SELECT * FROM aa_table WHERE id <= 1;
+ id | short_text |  long_text   | number | date_column 
+----+------------+--------------+--------+-------------
+  1 | Record_1   | Updated text |  60483 | 2023-07-26
+(1 row)
+
+postgres=# \timing
+Timing is on.
+postgres=# SELECT * FROM aa_table WHERE id <= 1;
+ id | short_text |  long_text   | number | date_column 
+----+------------+--------------+--------+-------------
+  1 | Record_1   | Updated text |  60483 | 2023-07-26
+(1 row)
+
+Time: 0.549 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM aa_table WHERE id <= 1;
+                                            QUERY PLAN                                            
+ 
+--------------------------------------------------------------------------------------------------
+-
+ Seq Scan on aa_table  (cost=0.00..3.25 rows=1 width=52) (actual time=0.011..0.011 rows=1 loops=1)
+   Filter: (id <= 1)
+   Rows Removed by Filter: 99
+ Planning Time: 0.088 ms
+ Execution Time: 0.020 ms
+(5 rows)
+
+Time: 0.533 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM aa_table WHERE id <= 10;
+                                            QUERY PLAN                                            
+ 
+--------------------------------------------------------------------------------------------------
+-
+ Seq Scan on aa_table  (cost=0.00..3.25 rows=9 width=52) (actual time=0.008..0.015 rows=9 loops=1)
+   Filter: (id <= 10)
+   Rows Removed by Filter: 91
+ Planning Time: 0.057 ms
+ Execution Time: 0.024 ms
+(5 rows)
+
+Time: 0.589 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM aa_table WHERE id <= 50;
+                                             QUERY PLAN                                           
+   
+--------------------------------------------------------------------------------------------------
+---
+ Seq Scan on aa_table  (cost=0.00..3.25 rows=49 width=52) (actual time=0.012..0.019 rows=49 loops=
+1)
+   Filter: (id <= 50)
+   Rows Removed by Filter: 51
+ Planning Time: 0.073 ms
+ Execution Time: 0.032 ms
+(5 rows)
+
+Time: 0.665 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM aa_table WHERE id <= 100;
+                                             QUERY PLAN                                           
+   
+--------------------------------------------------------------------------------------------------
+---
+ Seq Scan on aa_table  (cost=0.00..3.25 rows=99 width=52) (actual time=0.007..0.013 rows=99 loops=
+1)
+   Filter: (id <= 100)
+   Rows Removed by Filter: 1
+ Planning Time: 0.078 ms
+ Execution Time: 0.024 ms
+(5 rows)
+
+Time: 0.400 ms
+postgres=# SELECT * FROM aa_table WHERE id <= 100;
+ id  | short_text |            long_text             | number | date_column 
+-----+------------+----------------------------------+--------+-------------
+   2 | Record_2   | This is long text for record 2   | 399393 | 2023-10-26
+   3 | Record_3   | This is long text for record 3   |  80997 | 2023-09-29
+   5 | Record_5   | This is long text for record 5   | 305222 | 2023-10-06
+   6 | Record_6   | This is long text for record 6   | 777943 | 2023-10-23
+   7 | Record_7   | This is long text for record 7   | 520252 | 2023-01-27
+   8 | Record_8   | This is long text for record 8   | 931615 | 2023-01-04
+   9 | Record_9   | This is long text for record 9   | 210904 | 2023-12-29
+  10 | Record_10  | This is long text for record 10  | 421062 | 2023-05-14
+  11 | Record_11  | This is long text for record 11  | 883684 | 2023-03-03
+  12 | Record_12  | This is long text for record 12  | 484626 | 2023-08-05
+  13 | Record_13  | This is long text for record 13  | 220135 | 2023-07-18
+  14 | Record_14  | This is long text for record 14  | 528763 | 2023-09-09
+  15 | Record_15  | This is long text for record 15  | 111944 | 2023-08-22
+  16 | Record_16  | This is long text for record 16  | 268674 | 2023-09-09
+  17 | Record_17  | This is long text for record 17  | 126491 | 2023-12-19
+  18 | Record_18  | This is long text for record 18  | 556603 | 2023-12-01
+  19 | Record_19  | This is long text for record 19  | 934144 | 2023-02-07
+  20 | Record_20  | This is long text for record 20  | 403331 | 2023-04-04
+  21 | Record_21  | This is long text for record 21  | 464328 | 2023-06-11
+  22 | Record_22  | This is long text for record 22  | 733793 | 2023-09-05
+  23 | Record_23  | This is long text for record 23  | 828216 | 2023-04-17
+  24 | Record_24  | This is long text for record 24  | 307164 | 2023-04-17
+  25 | Record_25  | This is long text for record 25  | 399870 | 2023-01-26
+  26 | Record_26  | This is long text for record 26  | 499686 | 2023-06-09
+  27 | Record_27  | This is long text for record 27  | 448146 | 2023-05-10
+  28 | Record_28  | This is long text for record 28  | 959943 | 2023-08-10
+  29 | Record_29  | This is long text for record 29  | 687813 | 2023-12-16
+  30 | Record_30  | This is long text for record 30  | 556913 | 2023-11-24
+  31 | Record_31  | This is long text for record 31  | 414838 | 2023-04-01
+  32 | Record_32  | This is long text for record 32  | 247199 | 2023-09-07
+  33 | Record_33  | This is long text for record 33  | 118055 | 2023-05-27
+  34 | Record_34  | This is long text for record 34  |  76347 | 2023-09-22
+  35 | Record_35  | This is long text for record 35  | 743347 | 2023-08-24
+  36 | Record_36  | This is long text for record 36  | 227512 | 2023-10-12
+  37 | Record_37  | This is long text for record 37  |  18722 | 2023-03-17
+  38 | Record_38  | This is long text for record 38  | 957263 | 2023-03-28
+  39 | Record_39  | This is long text for record 39  | 336449 | 2023-05-23
+  40 | Record_40  | This is long text for record 40  | 171668 | 2023-11-22
+  41 | Record_41  | This is long text for record 41  | 804548 | 2023-12-07
+  42 | Record_42  | This is long text for record 42  | 945430 | 2023-06-14
+  43 | Record_43  | This is long text for record 43  | 912971 | 2023-04-26
+  44 | Record_44  | This is long text for record 44  | 262887 | 2023-01-11
+  45 | Record_45  | This is long text for record 45  | 263748 | 2023-01-05
+  46 | Record_46  | This is long text for record 46  | 842600 | 2023-03-02
+  47 | Record_47  | This is long text for record 47  | 459063 | 2023-03-26
+  48 | Record_48  | This is long text for record 48  | 918592 | 2023-07-23
+  49 | Record_49  | This is long text for record 49  | 261889 | 2023-08-17
+  50 | Record_50  | This is long text for record 50  |   2701 | 2023-03-20
+  51 | Record_51  | This is long text for record 51  | 791546 | 2023-12-14
+  52 | Record_52  | This is long text for record 52  | 796742 | 2023-01-01
+  53 | Record_53  | This is long text for record 53  | 807850 | 2023-10-15
+  54 | Record_54  | This is long text for record 54  | 803273 | 2023-03-10
+  55 | Record_55  | This is long text for record 55  | 104703 | 2023-07-09
+  56 | Record_56  | This is long text for record 56  | 683535 | 2023-10-30
+  57 | Record_57  | This is long text for record 57  | 974823 | 2023-04-04
+  58 | Record_58  | This is long text for record 58  | 805042 | 2023-03-02
+  59 | Record_59  | This is long text for record 59  | 435357 | 2023-03-17
+  60 | Record_60  | This is long text for record 60  | 624334 | 2023-03-17
+  61 | Record_61  | This is long text for record 61  | 998409 | 2023-11-04
+  62 | Record_62  | This is long text for record 62  | 868238 | 2023-01-11
+  63 | Record_63  | This is long text for record 63  | 825822 | 2023-05-31
+  64 | Record_64  | This is long text for record 64  | 855945 | 2023-07-30
+  65 | Record_65  | This is long text for record 65  | 984218 | 2023-02-18
+  66 | Record_66  | This is long text for record 66  | 581137 | 2023-11-14
+  67 | Record_67  | This is long text for record 67  | 590251 | 2023-05-11
+  68 | Record_68  | This is long text for record 68  | 325921 | 2023-04-17
+  69 | Record_69  | This is long text for record 69  |  48962 | 2023-11-21
+  70 | Record_70  | This is long text for record 70  | 974511 | 2023-12-15
+  71 | Record_71  | This is long text for record 71  | 497174 | 2023-05-04
+  72 | Record_72  | This is long text for record 72  | 843365 | 2023-02-23
+  73 | Record_73  | This is long text for record 73  | 391918 | 2023-03-10
+  74 | Record_74  | This is long text for record 74  | 645044 | 2023-06-14
+  75 | Record_75  | This is long text for record 75  | 869474 | 2023-04-29
+  76 | Record_76  | This is long text for record 76  | 195728 | 2023-11-15
+  77 | Record_77  | This is long text for record 77  | 747698 | 2023-11-19
+  78 | Record_78  | This is long text for record 78  |  91466 | 2023-10-16
+  79 | Record_79  | This is long text for record 79  | 572774 | 2023-12-13
+  80 | Record_80  | This is long text for record 80  | 887394 | 2023-01-19
+  81 | Record_81  | This is long text for record 81  | 906659 | 2023-02-19
+  82 | Record_82  | This is long text for record 82  | 279068 | 2023-03-24
+  83 | Record_83  | This is long text for record 83  | 614188 | 2023-03-18
+  84 | Record_84  | This is long text for record 84  | 508388 | 2023-12-29
+  85 | Record_85  | This is long text for record 85  | 505845 | 2023-07-02
+  86 | Record_86  | This is long text for record 86  | 191388 | 2023-07-14
+  87 | Record_87  | This is long text for record 87  | 605628 | 2023-10-22
+  88 | Record_88  | This is long text for record 88  | 125321 | 2023-04-12
+  89 | Record_89  | This is long text for record 89  |  91230 | 2023-08-28
+  90 | Record_90  | This is long text for record 90  | 402346 | 2023-04-26
+  91 | Record_91  | This is long text for record 91  | 659312 | 2023-08-12
+  92 | Record_92  | This is long text for record 92  | 501742 | 2023-07-15
+  93 | Record_93  | This is long text for record 93  | 531132 | 2023-10-29
+  94 | Record_94  | This is long text for record 94  | 507680 | 2023-08-27
+  95 | Record_95  | This is long text for record 95  | 377863 | 2023-09-12
+  96 | Record_96  | This is long text for record 96  | 401328 | 2023-02-25
+  97 | Record_97  | This is long text for record 97  | 221010 | 2023-10-30
+  98 | Record_98  | This is long text for record 98  | 591535 | 2023-12-30
+  99 | Record_99  | This is long text for record 99  | 477362 | 2023-03-24
+ 100 | Record_100 | This is long text for record 100 | 704921 | 2023-01-26
+   1 | Record_1   | Updated text                     |  60483 | 2023-07-26
+(99 rows)
+
+Time: 0.951 ms
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# EXPLAIN ANALYZE SELECT * FROM bb_table WHERE id <= 100;
+                                                       QUERY PLAN                                 
+                       
+--------------------------------------------------------------------------------------------------
+-----------------------
+ Index Scan using idx_b_id on bb_table  (cost=0.29..11.04 rows=100 width=56) (actual time=0.044..0
+.055 rows=100 loops=1)
+   Index Cond: (id <= 100)
+ Planning Time: 1.111 ms
+ Execution Time: 0.194 ms
+(4 rows)
+
+Time: 1.759 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM bb_table WHERE id <= 1000;
+                                                        QUERY PLAN                                
+                         
+--------------------------------------------------------------------------------------------------
+-------------------------
+ Index Scan using idx_b_id on bb_table  (cost=0.29..44.78 rows=1000 width=56) (actual time=0.014..
+0.938 rows=1000 loops=1)
+   Index Cond: (id <= 1000)
+ Planning Time: 0.056 ms
+ Execution Time: 1.009 ms
+(4 rows)
+
+Time: 1.467 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM bb_table WHERE id <= 5000;
+                                                         QUERY PLAN                               
+                          
+--------------------------------------------------------------------------------------------------
+--------------------------
+ Index Scan using idx_b_id on bb_table  (cost=0.29..207.78 rows=5000 width=56) (actual time=0.015.
+.1.179 rows=5000 loops=1)
+   Index Cond: (id <= 5000)
+ Planning Time: 0.056 ms
+ Execution Time: 1.322 ms
+(4 rows)
+
+Time: 1.638 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM bb_table WHERE id <= 10000;
+                                                 QUERY PLAN                                       
+           
+--------------------------------------------------------------------------------------------------
+-----------
+ Seq Scan on bb_table  (cost=0.00..238.00 rows=10000 width=56) (actual time=0.007..0.792 rows=1000
+0 loops=1)
+   Filter: (id <= 10000)
+ Planning Time: 0.124 ms
+ Execution Time: 1.077 ms
+(4 rows)
+
+Time: 1.769 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM cc_table WHERE id <= 10000;
+                                                         QUERY PLAN                               
+                           
+--------------------------------------------------------------------------------------------------
+---------------------------
+ Index Scan using idx_c_id on cc_table  (cost=0.42..387.57 rows=9551 width=60) (actual time=0.010.
+.1.815 rows=10000 loops=1)
+   Index Cond: (id <= 10000)
+ Planning Time: 2.478 ms
+ Execution Time: 2.092 ms
+(4 rows)
+
+Time: 5.287 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM cc_table WHERE id <= 100000;
+                                                            QUERY PLAN                            
+                                
+--------------------------------------------------------------------------------------------------
+--------------------------------
+ Index Scan using idx_c_id on cc_table  (cost=0.42..4047.24 rows=101418 width=60) (actual time=0.0
+19..29.948 rows=100000 loops=1)
+   Index Cond: (id <= 100000)
+ Planning Time: 0.059 ms
+ Execution Time: 32.907 ms
+(4 rows)
+
+Time: 33.445 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM cc_table WHERE id <= 500000;
+                                                             QUERY PLAN                           
+                                  
+--------------------------------------------------------------------------------------------------
+----------------------------------
+ Index Scan using idx_c_id on cc_table  (cost=0.42..19887.73 rows=499046 width=60) (actual time=0.
+015..115.611 rows=500000 loops=1)
+   Index Cond: (id <= 500000)
+ Planning Time: 0.055 ms
+ Execution Time: 131.096 ms
+(4 rows)
+
+Time: 131.825 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM cc_table WHERE id <= 1000000;
+                                                     QUERY PLAN                                   
+                   
+--------------------------------------------------------------------------------------------------
+-------------------
+ Seq Scan on cc_table  (cost=0.00..23863.00 rows=1000000 width=60) (actual time=0.007..107.531 row
+s=1000000 loops=1)
+   Filter: (id <= 1000000)
+ Planning Time: 0.234 ms
+ Execution Time: 142.114 ms
+(4 rows)
+
+Time: 142.654 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM aa_table WHERE id <= 50;
+                                             QUERY PLAN                                           
+   
+--------------------------------------------------------------------------------------------------
+---
+ Seq Scan on aa_table  (cost=0.00..3.25 rows=49 width=52) (actual time=0.011..0.019 rows=49 loops=
+1)
+   Filter: (id <= 50)
+   Rows Removed by Filter: 51
+ Planning Time: 0.067 ms
+ Execution Time: 0.031 ms
+(5 rows)
+
+Time: 0.602 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM aa_table WHERE id <= '50';
+                                             QUERY PLAN                                           
+   
+--------------------------------------------------------------------------------------------------
+---
+ Seq Scan on aa_table  (cost=0.00..3.25 rows=49 width=52) (actual time=0.010..0.017 rows=49 loops=
+1)
+   Filter: (id <= 50)
+   Rows Removed by Filter: 51
+ Planning Time: 0.061 ms
+ Execution Time: 0.713 ms
+(5 rows)
+
+Time: 1.299 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM bb_table WHERE id <= 5000;
+                                                         QUERY PLAN                               
+                          
+--------------------------------------------------------------------------------------------------
+--------------------------
+ Index Scan using idx_b_id on bb_table  (cost=0.29..207.78 rows=5000 width=56) (actual time=0.015.
+.0.643 rows=5000 loops=1)
+   Index Cond: (id <= 5000)
+ Planning Time: 0.057 ms
+ Execution Time: 0.785 ms
+(4 rows)
+
+Time: 1.425 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM bb_table WHERE id <= '5000';
+                                                         QUERY PLAN                               
+                          
+--------------------------------------------------------------------------------------------------
+--------------------------
+ Index Scan using idx_b_id on bb_table  (cost=0.29..207.78 rows=5000 width=56) (actual time=0.024.
+.1.168 rows=5000 loops=1)
+   Index Cond: (id <= 5000)
+ Planning Time: 0.079 ms
+ Execution Time: 1.380 ms
+(4 rows)
+
+Time: 1.963 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM cc_table WHERE id <= 500000;
+                                                            QUERY PLAN                            
+                                 
+--------------------------------------------------------------------------------------------------
+---------------------------------
+ Index Scan using idx_c_id on cc_table  (cost=0.42..19887.73 rows=499046 width=60) (actual time=0.
+018..57.220 rows=500000 loops=1)
+   Index Cond: (id <= 500000)
+ Planning Time: 0.057 ms
+ Execution Time: 70.209 ms
+(4 rows)
+
+Time: 73.646 ms
+postgres=# EXPLAIN ANALYZE SELECT * FROM cc_table WHERE id <= '500000';
+                                                            QUERY PLAN                            
+                                 
+--------------------------------------------------------------------------------------------------
+---------------------------------
+ Index Scan using idx_c_id on cc_table  (cost=0.42..19887.73 rows=499046 width=60) (actual time=0.
+049..96.334 rows=500000 loops=1)
+   Index Cond: (id <= 500000)
+ Planning Time: 0.085 ms
+ Execution Time: 118.468 ms
+(4 rows)
+
+Time: 128.430 ms
+postgres=# \timing
+Timing is off.
+postgres=# INSERT INTO cc_table (short_text, long_text, number, date_column) VALUES ('New Record 1', 'This is a new record', 123456, '2022-01-01');
+INSERT 0 1
+postgres=# EXPLAIN ANALYZE INSERT INTO cc_table (long_text) VALUES ('This is a new record');
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Insert on cc_table  (cost=0.00..0.01 rows=0 width=0) (actual time=2.091..2.091 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=76) (actual time=0.009..0.009 rows=1 loops=1)
+ Planning Time: 0.018 ms
+ Execution Time: 2.108 ms
+(4 rows)
+
+postgres=# INSERT INTO cc_table (short_text) VALUES ('New Record 1');
+INSERT 0 1
+postgres=# EXPLAIN ANALYZE INSERT INTO cc_table (short_text) VALUES ('New Record 1');
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Insert on cc_table  (cost=0.00..0.01 rows=0 width=0) (actual time=0.084..0.085 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=162) (actual time=0.007..0.008 rows=1 loops=1)
+ Planning Time: 0.024 ms
+ Execution Time: 0.095 ms
+(4 rows)
+
+postgres=# EXPLAIN ANALYZE INSERT INTO cc_table (long_text) VALUES ('This is a new record');
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Insert on cc_table  (cost=0.00..0.01 rows=0 width=0) (actual time=0.111..0.112 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=76) (actual time=0.008..0.008 rows=1 loops=1)
+ Planning Time: 0.020 ms
+ Execution Time: 0.126 ms
+(4 rows)
+
+postgres=# CREATE INDEX idx_insert_id ON cc_table (long_text);
+CREATE INDEX
+postgres=# EXPLAIN ANALYZE INSERT INTO cc_table (long_text) VALUES ('This is a new record');
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Insert on cc_table  (cost=0.00..0.01 rows=0 width=0) (actual time=5.951..5.952 rows=0 loops=1)
+   ->  Result  (cost=0.00..0.01 rows=1 width=76) (actual time=0.072..0.073 rows=1 loops=1)
+ Planning Time: 0.025 ms
+ Execution Time: 5.970 ms
+(4 rows)
+
+postgres=# DROP INDEX idx_insert_id
+postgres-# EXPLAIN ANALYZE UPDATE cc_table SET long_text = 'Updated text'WHERE short_text = 'Record_1';
+ERROR:  syntax error at or near "EXPLAIN"
+LINE 2: EXPLAIN ANALYZE UPDATE cc_table SET long_text = 'Updated tex...
+        ^
+postgres=# EXPLAIN ANALYZE UPDATE cc_table SET long_text = 'Updated text'WHERE short_text = 'Record_1';
+                                                  QUERY PLAN                                      
+            
+--------------------------------------------------------------------------------------------------
+------------
+ Update on cc_table  (cost=0.00..23863.06 rows=0 width=0) (actual time=66.778..66.778 rows=0 loops
+=1)
+   ->  Seq Scan on cc_table  (cost=0.00..23863.06 rows=1 width=38) (actual time=0.010..66.512 rows
+=1 loops=1)
+         Filter: ((short_text)::text = 'Record_1'::text)
+         Rows Removed by Filter: 1000005
+ Planning Time: 0.106 ms
+ Execution Time: 66.798 ms
+(6 rows)
+
+postgres=# EXPLAIN ANALYZE UPDATE cc_table SET long_text = 'Updated text'WHERE id = 1;
+                                                        QUERY PLAN                                
+                        
+--------------------------------------------------------------------------------------------------
+------------------------
+ Update on cc_table  (cost=0.42..8.44 rows=0 width=0) (actual time=0.054..0.054 rows=0 loops=1)
+   ->  Index Scan using idx_c_id on cc_table  (cost=0.42..8.44 rows=1 width=38) (actual time=0.019
+..0.019 rows=1 loops=1)
+         Index Cond: (id = 1)
+ Planning Time: 0.086 ms
+ Execution Time: 0.068 ms
+(5 rows)
+
+postgres=# EXPLAIN ANALYZE UPDATE cc_table SET long_text = 'Updated text'WHERE id <= 1000;
+                                                           QUERY PLAN                             
+                              
+--------------------------------------------------------------------------------------------------
+------------------------------
+ Update on cc_table  (cost=0.42..43.14 rows=0 width=0) (actual time=105.019..105.020 rows=0 loops=
+1)
+   ->  Index Scan using idx_c_id on cc_table  (cost=0.42..43.14 rows=955 width=38) (actual time=0.
+008..1.046 rows=1000 loops=1)
+         Index Cond: (id <= 1000)
+ Planning Time: 0.141 ms
+ Execution Time: 105.039 ms
+(5 rows)
+
+postgres=# EXPLAIN ANALYZE DELETE FROM cc_table WHERE short_text = 'Record_4';
+                                                  QUERY PLAN                                      
+            
+--------------------------------------------------------------------------------------------------
+------------
+ Delete on cc_table  (cost=0.00..23863.06 rows=0 width=0) (actual time=61.455..61.455 rows=0 loops
+=1)
+   ->  Seq Scan on cc_table  (cost=0.00..23863.06 rows=1 width=6) (actual time=42.895..61.443 rows
+=1 loops=1)
+         Filter: ((short_text)::text = 'Record_4'::text)
+         Rows Removed by Filter: 1000005
+ Planning Time: 0.089 ms
+ Execution Time: 61.474 ms
+(6 rows)
+
+postgres=# EXPLAIN ANALYZE DELETE FROM cc_table WHERE id  = 1;
+                                                       QUERY PLAN                                 
+                       
+--------------------------------------------------------------------------------------------------
+-----------------------
+ Delete on cc_table  (cost=0.42..8.44 rows=0 width=0) (actual time=0.029..0.029 rows=0 loops=1)
+   ->  Index Scan using idx_c_id on cc_table  (cost=0.42..8.44 rows=1 width=6) (actual time=0.016.
+.0.018 rows=1 loops=1)
+         Index Cond: (id = 1)
+ Planning Time: 0.058 ms
+ Execution Time: 0.043 ms
+(5 rows)
+
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('aa_table')) AS table_size;
+ table_size 
+------------
+ 128 kB
+(1 row)
+
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('bb_table')) AS table_size;
+ table_size 
+------------
+ 1664 kB
+(1 row)
+
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('cc_table')) AS table_size;
+ table_size 
+------------
+ 207 MB
+(1 row)
+
+postgres=# ^C
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# 
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('idx_a_number')) AS index_size;
+ index_size 
+------------
+ 16 kB
+(1 row)
+
+postgres=# 
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('idx_b_number')) AS index_size;
+ index_size 
+------------
+ 240 kB
+(1 row)
+
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('idx_c_number')) AS index_size;
+ index_size 
+------------
+ 19 MB
+(1 row)
+
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('idx_a_id')) AS index_size;
+ index_size 
+------------
+ 16 kB
+(1 row)
+
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('idx_b_id')) AS index_size;
+ index_size 
+------------
+ 240 kB
+(1 row)
+
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('idx_c_id')) AS index_size;
+ index_size 
+------------
+ 21 MB
+(1 row)
+
+postgres=# \timing
+Timing is on.
+postgres=# CREATE INDEX idx_date ON aa_table (date_column);
+CREATE INDEX
+Time: 16.053 ms
+postgres=# CREATE INDEX idx_date ON bb_table (date_column);
+ERROR:  relation "idx_date" already exists
+Time: 1.975 ms
+postgres=# CREATE INDEX idx_date_b ON bb_table (date_column);
+CREATE INDEX
+Time: 23.605 ms
+postgres=# CREATE INDEX idx_date_c ON cc_table (date_column);
+
+
+CREATE INDEX
+Time: 823.882 ms
+postgres=# 
+postgres=# 
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('cc_table'));
+ pg_size_pretty 
+----------------
+ 214 MB
+(1 row)
+
+Time: 272.958 ms
+postgres=# SELECT * FROM cc_table WHERE id = 1;
+ id | short_text | long_text | number | date_column 
+----+------------+-----------+--------+-------------
+(0 rows)
+
+Time: 58.490 ms
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('cc_table'));
+ pg_size_pretty 
+----------------
+ 214 MB
+(1 row)
+
+Time: 0.949 ms
+postgres=# SELECT * FROM cc_table WHERE id = '1';
+ id | short_text | long_text | number | date_column 
+----+------------+-----------+--------+-------------
+(0 rows)
+
+Time: 2.826 ms
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('cc_table'));
+ pg_size_pretty 
+----------------
+ 214 MB
+(1 row)
+
+Time: 1.624 ms
+postgres=# CREATE INDEX idx_iddd_c ON cc_table (id);
+CREATE INDEX
+Time: 5569.692 ms (00:05.570)
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('cc_table'));
+ pg_size_pretty 
+----------------
+ 235 MB
+(1 row)
+
+Time: 0.952 ms
+postgres=# CREATE INDEX idx_short_c ON cc_table (short_text);
+CREATE INDEX
+Time: 3207.328 ms (00:03.207)
+postgres=# SELECT pg_size_pretty(pg_total_relation_size('cc_table'));
+ pg_size_pretty 
+----------------
+ 265 MB
+(1 row)
+
+Time: 0.903 ms
+postgres=# ^C
+postgres=# CREATE INDEX idx_short_css ON cc_table (long_text);
+
+CREATE INDEX
+Time: 11451.918 ms (00:11.452)
+postgres=# 
+postgres=# 
